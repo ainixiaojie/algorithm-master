@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <!-- 引入样式 -->
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <link rel="stylesheet" href="../../styles/page.css" />
+  <style>
+    .selectInput {
+      position: relative;
+      width: 100%;
+      min-width: 100px;
+    }
+    .selectInput .flavorSelect {
+      position: absolute;
+      width: 100%;
+      padding: 0 10px;
+      border-radius: 3px;
+      border: solid 1px #FF903D;
+      line-height: 30px;
+      text-align: center;
+      background: #fff;
+      top: 50px;
+      z-index: 99;
+    }
+    .selectInput .flavorSelect .items {
+      cursor: pointer;
+      display: inline-block;
+      width: 100%;
+      line-height: 35px;
+      border-bottom: solid 1px #f4f4f4;
+      color: #666;
+    }
+    .selectInput .flavorSelect .none {
+      font-size: 14px;
+    }
+
+    #food-add-app .uploadImg .el-form-item__label::before{
+          content: '*';
+          color: #F56C6C;
+          margin-right: 4px;
+      }
+
+  </style>
+</head>
+<body>
+   <div class="addBrand-container" id="food-add-app">
+    <div class="container">
+      <el-form ref="editForm" :model="editForm" :rules="rules" :inline="true" label-width="180px" class="demo-editForm">
+        <div>
+          <el-form-item label="用户姓名:" prop="name">
+            <el-input v-model="editForm.userName" placeholder="请设输入用户姓名" maxlength="20"/>
+          </el-form-item>
+          <el-form-item label="警情分类:" >
+            <el-select v-model="editForm.classificationId" placeholder="请选警情分类">
+              <el-option v-for="(item,index) in classificationList" :key="index" :label="item.name" :value="item.id" />
+            </el-select>
+          </el-form-item>
+        </div>
+        <div>
+          <el-form-item label="经度:" prop="ip">
+            <el-input v-model="editForm.latitude" placeholder="请输经度"/>
+          </el-form-item>
+          <el-form-item label="纬度:" prop="ip">
+            <el-input v-model="editForm.longitude" placeholder="请输纬度"/>
+          </el-form-item>
+        </div>
+
+        <div>
+        </div>
+        <div>
+          <el-form-item label="警报图片:" prop="region" class="uploadImg">
+            <el-upload
+              class="avatar-uploader"
+              action="/common/upload"
+              :show-file-list="false"
+              :on-success="handleAvatarSuccess"
+              :on-change="onChange"
+              ref="upload"
+            >
+              <img
+                v-if="imageUrl"
+                :src="imageUrl"
+                class="avatar"
+              ></img>
+              <i
+                v-else
+                class="el-icon-plus avatar-uploader-icon"
+              ></i>
+            </el-upload>
+          </el-form-item>
+        </div>
+
+        <div class="address">
+          <el-form-item label="警报详情:" prop="detail">
+            <el-input
+              v-model="editForm.detail"
+              type="textarea"
+              :rows="3"
+              placeholder="设备描述,最长200字"
+              maxlength="200"
+            />
+          </el-form-item>
+        </div>
+        <div class="subBox address">
+          <el-form-item>
+            <el-button @click="goBack()">
+              取消
+            </el-button>
+            <el-button
+              type="primary"
+              @click="submitForm('editForm')"
+            >
+              保存
+            </el-button>
+            <el-button
+              v-if="actionType == 'add'"
+              type="primary"
+              class="continue"
+              @click="submitForm('editForm','goAnd')"
+            >
+              保存并继续添加菜品
+            </el-button>
+          </el-form-item>
+        </div>
+      </el-form>
+    </div>
+  </div>
+    <!-- 开发环境版本，包含了有帮助的命令行警告 -->
+    <script src="../../plugins/vue/vue.js"></script>
+    <!-- 引入组件库 -->
+    <script src="../../plugins/element-ui/index.js"></script>
+    <!-- 引入axios -->
+    <script src="../../plugins/axios/axios.min.js"></script>
+    <script src="../../js/request.js"></script>
+    <script src="../../js/validate.js"></script>
+    <script src="../../js/index.js"></script>
+    <script src="../../api/alert.js"></script>
+    <script>
+      new Vue({
+        el: '#food-add-app',
+        data() {
+          return {
+            id: '',
+
+            imageUrl: '',
+            actionType: '',
+
+
+            //下拉框设备类型选项
+            classificationList: [],
+
+            
+            editForm  : {},
+
+          }
+        },
+        computed: {},
+        created() {
+          this.getClassificationList()
+
+          this.id = requestUrlParam('id')
+          this.actionType = this.id ? 'edit' : 'add'
+          if (this.id) {
+            this.init()
+          }
+        },
+        mounted() {
+        },
+        methods: {
+          /**
+           * 根据id, 查询设备信息
+           * @returns {Promise<void>}
+           */
+          async init () {
+            queryAlertById(this.id).then(res => {
+              if (String(res.code) === '1') {
+                console.log("res.data",res.data)
+                this.editForm=res.data
+                this.imageUrl = `/common/download?name=${res.data.image}`
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            })
+          },
+
+
+          /**
+           * 获取警报原因分类
+           */
+          getClassificationList () {
+            getReasonList().then(res => {
+              if (res.code === 1) {
+
+                this.classificationList = res.data
+
+
+
+                console.log("this.classificationList",this.classificationList)
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            })
+          },
+
+
+
+
+          submitForm(formName, st) {
+            this.$refs[formName].validate((valid) => {
+              if (valid) {
+                let params = {...this.editForm}
+
+
+                if(!this.imageUrl){
+                  this.$message.error("请附加警情图片")
+                  return 
+                }
+                if (this.actionType == 'add') {
+                  delete params.id
+                  addAlert(params).then(res => {
+                    if (res.code === 1) {
+                      this.$message.success('警情添加成功！')
+                      if (!st) {
+                        this.goBack()
+                      } else {
+                        this.classificationList= []
+
+                        this.imageUrl = ''
+                        this.editForm = {}
+                      }
+                    } else {
+                      this.$message.error(res.msg || '操作失败')
+                    }
+                  }).catch(err => {
+                    this.$message.error('请求出错了：' + err)
+                  })
+                } else {
+
+                  editAlert(params).then(res => {
+                    if (res.code === 1) {
+                      this.$message.success('警报修改成功！')
+                      this.goBack()
+                    } else {
+                      this.$message.error(res.msg || '操作失败')
+                    }
+                  }).catch(err => {
+                    this.$message.error('请求出错了：' + err)
+                  })
+                }
+              } else {
+                return false
+              }
+            })
+          },
+
+          handleAvatarSuccess (response, file, fileList) {
+            // 拼接down接口预览
+            if(response.code === 0 && response.msg === '未登录'){
+              window.top.location.href = '/backend/page/login/login.html'
+            }else{
+              this.imageUrl = `/common/download?name=${response.data}`
+              this.editForm.image = response.data
+            }
+          },
+
+          onChange (file) {
+            if(file){
+              const suffix = file.name.split('.')[1]
+              const size = file.size / 1024 / 1024 < 2
+              if(['png','jpeg','jpg'].indexOf(suffix) < 0){
+                this.$message.error('上传图片只支持 png、jpeg、jpg 格式！')
+                this.$refs.upload.clearFiles()
+                return false
+              }
+              if(!size){
+                this.$message.error('上传文件大小不能超过 2MB!')
+                return false
+              }
+              return file
+            }
+          },
+          
+          goBack(){
+            window.parent.menuHandle({
+              id: '4',
+              url: '/backend/page/alert/list.html',
+              name: '警情管理'
+            },false)
+          }
+        }
+      })
+    </script>
+</body>
+</html>
